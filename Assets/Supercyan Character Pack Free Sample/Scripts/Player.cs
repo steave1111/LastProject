@@ -17,7 +17,7 @@ public class Player : MonoBehaviour
     private readonly float interpolation = 10;
     private readonly float walkScale = 0.33f;
 
-
+    private Vector3 normal = Vector3.zero;
     private bool wasGrounded;
     private Vector3 Vec = Vector3.zero;
 
@@ -29,6 +29,11 @@ public class Player : MonoBehaviour
     private bool IsPickingUp = false;
 
     private List<Collider> collisions = new List<Collider>();
+
+    public Transform BallPoint;//공의 위치
+    public Ball Target=null;
+   
+    
     
 
     private void Awake()
@@ -45,30 +50,39 @@ public class Player : MonoBehaviour
 
     private void OnCollisionEnter(Collision collision)
     {
-        
-        //접촉 포인트들을 리스트에 담아둠
-        ContactPoint[] contactPoints = collision.contacts;
-        for (int i = 0; i < contactPoints.Length; i++)
-        {
-            if (Vector3.Dot(contactPoints[i].normal, Vector3.up) > 0.5f)
-            {
-                if (!collisions.Contains(collision.collider))
-                {
-                    collisions.Add(collision.collider);
-                    Debug.Log("땅에 닿음");
-                }
-                IsGrounded = true;
-            }
-        }
 
-        if (collision.gameObject.CompareTag("Obstacle"))
+        //접촉 포인트들을 리스트에 담아둠
+        //ContactPoint[] contactPoints = collision.contacts;
+        //for (int i = 0; i < contactPoints.Length; i++)
+        //{
+        //    if (Vector3.Dot(contactPoints[i].normal, Vector3.up) > 0.5f)
+        //    {
+        //        if (!collisions.Contains(collision.collider))
+        //        {
+        //            collisions.Add(collision.collider);
+        //            Debug.Log("땅에 닿음");
+        //        }
+        //        IsGrounded = true;
+        //    }
+        //}
+
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            IsGrounded = true;
+        }
+        else if (collision.gameObject.CompareTag("Obstacle"))
         {
             anim.SetTrigger("Pickup");
             IsPickingUp = true;
             Invoke("DestroyFood", 0.6f);
             Invoke("Stay", 1.7f);
         }
-
+        else if (collision.gameObject.CompareTag("Ball"))
+        {
+            Target = collision.gameObject.GetComponent<Ball>();
+            Target.transform.SetParent(BallPoint);
+            Target.SetRigidMass(1);
+        }
     }
 
     private void DestroyFood()
@@ -85,46 +99,76 @@ public class Player : MonoBehaviour
 
     private void OnCollisionStay(Collision collision)
     {
-        //접촉 중이면 걸는 모션이고 아니면 공중에 뜬 모션
-        ContactPoint[] contactPoints = collision.contacts;
-        bool CanWalk = false;
-        for (int i = 0; i < contactPoints.Length; i++)
-        {
-            if (Vector3.Dot(contactPoints[i].normal, Vector3.up) > 0.5f)
-            {
-                CanWalk = true; break;
-            }
-        }
+        ////접촉 중이면 걸는 모션이고 아니면 공중에 뜬 모션
+        //ContactPoint[] contactPoints = collision.contacts;
+        //bool CanWalk = false;
+        //for (int i = 0; i < contactPoints.Length; i++)
+        //{
+        //    if (Vector3.Dot(contactPoints[i].normal, Vector3.up) > 0.5f)
+        //    {
+        //        CanWalk = true; break;
+        //    }
+        //}
 
-        if (CanWalk)
+        //if (CanWalk)
+        //{
+        //    IsGrounded = true;
+        //    if (!collisions.Contains(collision.collider))
+        //    {
+        //        collisions.Add(collision.collider);
+        //    }
+        //}
+        //else
+        //{
+        //    if (collisions.Contains(collision.collider))
+        //    {
+        //        collisions.Remove(collision.collider);
+        //    }
+        //    if (collisions.Count == 0) { IsGrounded = false; }
+        //}
+
+        if (/*collision.gameObject.CompareTag("Ball") && */Input.GetKey(KeyCode.LeftControl))
         {
-            IsGrounded = true;
-            if (!collisions.Contains(collision.collider))
+            if (Target != null)
             {
-                collisions.Add(collision.collider);
+                anim.SetBool("IsPush", true);
+                Target.SetVelocity(new Vector3(currentX, 0, currentY));
             }
+           
+
+           
+            
+            
+
+
         }
         else
         {
-            if (collisions.Contains(collision.collider))
-            {
-                collisions.Remove(collision.collider);
-            }
-            if (collisions.Count == 0) { IsGrounded = false; }
+            anim.SetBool("IsPush", false);
         }
-
-        
     }
 
     private void OnCollisionExit(Collision collision)
     {
         //접촉 중이지 않을 때 리스트에 모든 정보를 제거.
-        if (collisions.Contains(collision.collider))
+        //if (collisions.Contains(collision.collider))
+        //{
+        //    collisions.Remove(collision.collider);
+        //    Debug.Log("공중에 있음");
+        //}
+        //if (collisions.Count == 0) { IsGrounded = false; }
+
+        if (collision.gameObject.CompareTag("Ground"))
         {
-            collisions.Remove(collision.collider);
-            Debug.Log("공중에 있음");
+            IsGrounded = false;
         }
-        if (collisions.Count == 0) { IsGrounded = false; }
+
+        else if (collision.gameObject.CompareTag("Ball"))
+        {          
+            Target.transform.SetParent(null);
+            Target.SetRigidMass(100);
+            Target = null;
+        }
 
         IsPickingUp = false;
     }
